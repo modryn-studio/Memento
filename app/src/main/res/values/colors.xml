@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="memento_background">#000000</color>
+    <color name="memento_surface">#121212</color>
+    <color name="memento_surface_variant">#1E1E1E</color>
+    <color name="memento_primary">#BB86FC</color>
+    <color name="memento_secondary">#03DAC6</color>
+    <color name="memento_on_background">#FFFFFF</color>
+    <color name="memento_on_surface">#E1E1E1</color>
+    <color name="memento_on_surface_variant">#A0A0A0</color>
+    <color name="memento_error">#CF6679</color>
+</resources>

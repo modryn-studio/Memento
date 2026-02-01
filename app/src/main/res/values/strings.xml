@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Memento</string>
+    <string name="file_watcher_notification_title">Memento is watching your notes</string>
+    <string name="file_watcher_notification_text">Keeping your memory up to date</string>
+    <string name="search_placeholder">What are you looking for?</string>
+    <string name="no_results">I couldn\'t find anything about that</string>
+    <string name="permission_required">Permission needed to read your notes</string>
+    <string name="grant_permission">Grant Access</string>
+    <string name="notes_indexed">%d notes in memory</string>
+    <string name="processing_notes">Processing your notes…</string>
+</resources>

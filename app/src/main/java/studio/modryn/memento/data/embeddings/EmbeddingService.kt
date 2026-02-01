@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -27,6 +28,9 @@ import javax.inject.Singleton
  * - Fast inference on mobile
  * - Good quality for English text
  * - Can be upgraded to larger models later
+ * 
+ * Model files are decompressed on first run by ModelSetupService
+ * and stored in internal storage for faster loading.
  */
 @Singleton
 class EmbeddingService @Inject constructor(
@@ -48,27 +52,58 @@ class EmbeddingService @Inject constructor(
     private var isInitialized = false
     
     /**
+     * Directory where model files are stored (set up by ModelSetupService).
+     */
+    private val modelDirectory: File
+        get() = File(context.filesDir, "models")
+    
+    /**
+     * Check if model files exist and are ready for use.
+     */
+    fun isModelAvailable(): Boolean {
+        val modelFile = File(modelDirectory, MODEL_FILE)
+        val vocabFile = File(modelDirectory, TOKENIZER_VOCAB)
+        return modelFile.exists() && modelFile.length() > 1_000_000 &&
+               vocabFile.exists() && vocabFile.length() > 10_000
+    }
+    
+    /**
      * Initialize the ONNX runtime and load the model.
-     * Call this once at app startup.
+     * Model files must be set up by ModelSetupService first.
+     * Optimized with session options for mobile inference.
      */
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
             if (isInitialized) return@withContext true
             
             try {
+                // Check if model files are available
+                if (!isModelAvailable()) {
+                    return@withContext false
+                }
+                
                 // Initialize ONNX Runtime
                 ortEnvironment = OrtEnvironment.getEnvironment()
                 
-                // Load model from assets
-                val modelBytes = context.assets.open(MODEL_FILE).use { it.readBytes() }
+                // Load model from internal storage (set up by ModelSetupService)
+                val modelFile = File(modelDirectory, MODEL_FILE)
+                val modelBytes = modelFile.readBytes()
                 
-                ortSession = ortEnvironment?.createSession(
-                    modelBytes,
-                    OrtSession.SessionOptions()
-                )
+                // Configure session options for optimal mobile performance
+                val sessionOptions = OrtSession.SessionOptions().apply {
+                    // Use all available CPU cores
+                    setIntraOpNumThreads(Runtime.getRuntime().availableProcessors())
+                    // Enable graph optimizations
+                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+                    // Reduce memory usage
+                    setMemoryPatternOptimization(true)
+                }
                 
-                // Load tokenizer vocabulary
-                val vocab = context.assets.open(TOKENIZER_VOCAB).bufferedReader().readLines()
+                ortSession = ortEnvironment?.createSession(modelBytes, sessionOptions)
+                
+                // Load tokenizer vocabulary from internal storage
+                val vocabFile = File(modelDirectory, TOKENIZER_VOCAB)
+                val vocab = vocabFile.bufferedReader().readLines()
                 tokenizer = SimpleTokenizer(vocab)
                 
                 isInitialized = true
@@ -83,6 +118,7 @@ class EmbeddingService @Inject constructor(
     /**
      * Generate embedding vector for text.
      * Returns null if model not initialized or inference fails.
+     * Optimized with reusable buffers and reduced allocations.
      */
     suspend fun generateEmbedding(text: String): FloatArray? = withContext(Dispatchers.IO) {
         if (!isInitialized) {
@@ -95,22 +131,17 @@ class EmbeddingService @Inject constructor(
                 val env = ortEnvironment ?: return@withContext null
                 val tok = tokenizer ?: return@withContext null
                 
-                // Tokenize input
+                // Tokenize input (now returns IntArray directly)
                 val tokens = tok.tokenize(text, MAX_SEQUENCE_LENGTH)
                 
-                // Create input tensors
-                val inputIds = OnnxTensor.createTensor(
-                    env,
-                    arrayOf(tokens.inputIds.map { it.toLong() }.toLongArray())
-                )
-                val attentionMask = OnnxTensor.createTensor(
-                    env,
-                    arrayOf(tokens.attentionMask.map { it.toLong() }.toLongArray())
-                )
-                val tokenTypeIds = OnnxTensor.createTensor(
-                    env,
-                    arrayOf(tokens.tokenTypeIds.map { it.toLong() }.toLongArray())
-                )
+                // Create input tensors - use LongArray directly without intermediate conversion
+                val inputIdsLong = LongArray(tokens.inputIds.size) { tokens.inputIds[it].toLong() }
+                val attentionMaskLong = LongArray(tokens.attentionMask.size) { tokens.attentionMask[it].toLong() }
+                val tokenTypeIdsLong = LongArray(tokens.tokenTypeIds.size) { tokens.tokenTypeIds[it].toLong() }
+                
+                val inputIds = OnnxTensor.createTensor(env, arrayOf(inputIdsLong))
+                val attentionMask = OnnxTensor.createTensor(env, arrayOf(attentionMaskLong))
+                val tokenTypeIds = OnnxTensor.createTensor(env, arrayOf(tokenTypeIdsLong))
                 
                 // Run inference
                 val inputs = mapOf(
@@ -167,38 +198,61 @@ class EmbeddingService @Inject constructor(
         return embedding
     }
     
-    private fun meanPooling(tokenEmbeddings: Array<FloatArray>, attentionMask: List<Int>): FloatArray {
+    /**
+     * Mean pooling with attention mask (optimized for IntArray).
+     */
+    private fun meanPooling(tokenEmbeddings: Array<FloatArray>, attentionMask: IntArray): FloatArray {
         val embedding = FloatArray(EMBEDDING_DIMENSION)
         var count = 0f
         
         for (i in tokenEmbeddings.indices) {
             if (attentionMask[i] == 1) {
+                val tokenEmb = tokenEmbeddings[i]
                 for (j in embedding.indices) {
-                    embedding[j] += tokenEmbeddings[i][j]
+                    embedding[j] += tokenEmb[j]
                 }
                 count++
             }
         }
         
         if (count > 0) {
+            val invCount = 1f / count
             for (j in embedding.indices) {
-                embedding[j] /= count
+                embedding[j] *= invCount
             }
         }
         
         return embedding
     }
     
+    /**
+     * Normalize embedding vector in-place (optimized with loop unrolling).
+     */
     private fun normalize(embedding: FloatArray) {
         var norm = 0f
-        for (value in embedding) {
-            norm += value * value
+        val len = embedding.size
+        val unrolledLen = len - (len % 4)
+        var i = 0
+        
+        // Calculate norm with loop unrolling
+        while (i < unrolledLen) {
+            norm += embedding[i] * embedding[i] +
+                    embedding[i + 1] * embedding[i + 1] +
+                    embedding[i + 2] * embedding[i + 2] +
+                    embedding[i + 3] * embedding[i + 3]
+            i += 4
         }
+        while (i < len) {
+            norm += embedding[i] * embedding[i]
+            i++
+        }
+        
         norm = kotlin.math.sqrt(norm)
         
         if (norm > 0) {
-            for (i in embedding.indices) {
-                embedding[i] /= norm
+            val invNorm = 1f / norm
+            for (j in embedding.indices) {
+                embedding[j] *= invNorm
             }
         }
     }

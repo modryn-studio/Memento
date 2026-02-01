@@ -10,6 +10,7 @@ import dagger.hilt.components.SingletonComponent
 import studio.modryn.memento.data.database.MementoDatabase
 import studio.modryn.memento.data.database.dao.EmbeddingDao
 import studio.modryn.memento.data.database.dao.NoteDao
+import studio.modryn.memento.data.database.dao.ScanProgressDao
 import javax.inject.Singleton
 
 /**
@@ -45,5 +46,11 @@ object DatabaseModule {
     @Singleton
     fun provideEmbeddingDao(database: MementoDatabase): EmbeddingDao {
         return database.embeddingDao()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideScanProgressDao(database: MementoDatabase): ScanProgressDao {
+        return database.scanProgressDao()
     }
 }

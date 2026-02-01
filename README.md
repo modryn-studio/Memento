@@ -1,6 +1,52 @@
 # Memento
 
-**Local AI-powered note memory system for Android.**
+**A magic notebook that remembers everything for you.**
+
+## How It Works
+
+### 1. **Setup (First Time)**
+- App asks: "Can I read your notes?" (You say yes)
+- App asks: "Where are your notes?" (You point to a folder)
+- App downloads a tiny robot brain (22MB) that lives only on your phone
+- App reads all your notes and learns what's in them
+
+### 2. **The Invisible Butler**
+After setup, the app runs quietly in the background like a helpful robot:
+- When you save a new note, it reads it automatically
+- When you change a note, it remembers the update
+- When you delete a note, it forgets it
+- You never have to tell it to do any of this - it just watches and learns
+
+### 3. **Finding Your Memories**
+Open the app and type a question like:
+- "What did I write about my vacation?"
+- "Notes about birthday ideas"
+- "That thing mom told me"
+
+The app searches ALL your notes instantly and shows you the right ones - even if you didn't use those exact words.
+
+### 4. **The Smart Part**
+The robot brain understands *meaning*, not just matching words:
+- You search "trip planning" → finds notes about "vacation" and "travel"
+- You search "gift ideas" → finds notes about "presents" and "shopping"
+
+## What Makes It Special
+
+**Privacy:** The robot brain lives on YOUR phone. Your notes never leave. No internet needed.
+
+**Speed:** Answers appear in under 2 seconds.
+
+**Invisible:** You don't organize anything. Just write notes however you want. The system handles everything.
+
+## Example Day
+
+Morning: You write "Buy milk, bread, eggs"
+→ App reads it silently
+
+Afternoon: You search "grocery"
+→ App shows your morning note instantly
+
+**That's it. You just write. It remembers. You ask. It finds.**
 
 Transform scattered notes into a searchable knowledge graph that acts as your external memory.
 
@@ -25,67 +71,31 @@ Memento is a "Silent System" that works invisibly in the background:
 
 - **Language:** Kotlin
 - **UI Framework:** Jetpack Compose
-- **Database:** Room with FTS5 for full-text search
+- **Database:** Room with FTS4 for full-text search
 - **Background Processing:** WorkManager + Foreground Service
-- **AI/ML:** ONNX Runtime for on-device vector embeddings
+- **AI/ML:** ONNX Runtime for on-device vector embeddings (all-MiniLM-L6-v2, 384-dim)
 - **Min SDK:** 26 (Android 8.0)
 - **Target SDK:** 34
 
-## Project Structure
+## Performance Features
 
-```
-studio.modryn.memento
-├── data/
-│   ├── database/      # Room database, DAOs, entities
-│   ├── repository/    # Data access layer
-│   ├── parser/        # Markdown/text parsing
-│   └── embeddings/    # ONNX vector embedding pipeline
-├── service/
-│   ├── FileWatcherService.kt   # Foreground service for file monitoring
-│   └── NoteProcessingWorker.kt # WorkManager for background processing
-├── domain/
-│   └── model/         # Domain models
-├── ui/
-│   ├── search/        # Global search overlay
-│   └── theme/         # Material3 theming
-└── di/                # Dependency injection (Hilt)
-```
+- **Parallel Semantic Search:** Multi-threaded vector similarity (4-way parallelism)
+- **Smart Tokenization:** LRU cache for frequent words, optimized IntArray output
+- **ONNX Optimization:** Multi-core inference, graph optimizations, memory pattern optimization
+- **Event Debouncing:** 500ms coalescing for file changes (handles rapid editor saves)
+- **Database Indexes:** Optimized queries on filePath and lastModified
 
-## Setup
+## Phase 1 Features (Complete ✅)
 
-### Prerequisites
-
-- Android Studio Hedgehog (2023.1.1) or later
-- JDK 17
-- Android SDK 34
-
-### Building
-
-1. Clone the repository
-2. Open in Android Studio
-3. Download the ONNX model:
-   - Download `all-MiniLM-L6-v2.onnx` from [Hugging Face](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-   - Place in `app/src/main/assets/`
-   - Also download `vocab.txt` from the same model
-4. Sync Gradle
-5. Build and run on device
-
-### Required Assets
-
-The following files need to be placed in `app/src/main/assets/`:
-- `all-MiniLM-L6-v2.onnx` - Sentence transformer model (~22MB)
-- `vocab.txt` - Tokenizer vocabulary
-
-## Phase 1 Features (Weeks 1-2)
-
-- [x] Project setup
-- [x] Room database with FTS5
-- [x] File watcher service
-- [x] ONNX embedding pipeline
-- [x] Basic search UI
-- [ ] Folder selection UI
-- [ ] Permission handling
-- [ ] Initial scan workflow
+- [x] Project setup with Hilt DI
+- [x] Room database with FTS4 and indexes
+- [x] Hybrid FileObserver + SAF polling
+- [x] ONNX embedding pipeline with caching
+- [x] Onboarding flow (model setup, permissions, folder selection)
+- [x] Search UI with "calm butler" voice/tone
+- [x] Permission handling with progressive escalation
+- [x] Initial scan workflow with progress tracking
+- [x] Performance optimizations (parallel search, loop unrolling)
 
 ## Phase 2 Features (Weeks 3-4)
 
@@ -96,7 +106,12 @@ The following files need to be placed in `app/src/main/assets/`:
 
 ## Permissions
 
-- `READ_EXTERNAL_STORAGE` / `READ_MEDIA_DOCUMENTS` - Read note files
+- `READ_EXTERNAL_STORAGE` (SDK ≤32) / `READ_MEDIA_DOCUMENTS` (SDK 33+) - Read note files
+- `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_DATA_SYNC` - Background file monitoring
+- `POST_NOTIFICATIONS` (SDK 33+) - Scan progress notifications
+- `RECEIVE_BOOT_COMPLETED` - Restart service on reboot
+- `WAKE_LOCK` - Keep service running
+- Storage Access Framework (SAF) - Folder selection on Android 11+
 - `FOREGROUND_SERVICE` - Background file monitoring
 - `POST_NOTIFICATIONS` - Service notification
 - `SYSTEM_ALERT_WINDOW` - Global search overlay (future)

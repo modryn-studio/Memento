@@ -1,17 +1,30 @@
-# Memento
+# Memento App Module
 
 See project [README.md](../README.md) for full documentation.
 
 ## Quick Start
 
 1. Open project in Android Studio
-2. Add ONNX model files to `app/src/main/assets/`
+2. Add compressed ONNX model files to `app/src/main/assets/`:
+   - `all-MiniLM-L6-v2.onnx.gz` (~8MB compressed)
+   - `vocab.txt.gz` (~200KB compressed)
 3. Sync Gradle and build
 4. Run on physical device (file access requires real device)
+5. Model will be decompressed automatically on first launch
 
 ## Architecture
 
-- MVVM with Hilt for dependency injection
-- Room database with FTS5 for search
-- ONNX Runtime for on-device embeddings
-- Jetpack Compose for UI
+- **Pattern:** MVVM with Hilt for dependency injection
+- **Database:** Room v3 with FTS4 for search, indexes on filePath/lastModified
+- **AI/ML:** ONNX Runtime with multi-threading and graph optimizations
+- **UI:** Jetpack Compose with Material3 dark theme
+- **Background:** WorkManager for scanning + Foreground Service for file watching
+- **Storage:** DataStore for preferences, SAF for folder selection
+
+## Performance Optimizations
+
+- Parallel semantic search with coroutines (4-way split)
+- Tokenizer LRU cache (500 entries) + IntArray output
+- Loop-unrolled cosine similarity and normalization
+- File event debouncing (500ms)
+- Database indexes for fast lookups

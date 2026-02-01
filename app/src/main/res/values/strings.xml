@@ -1,11 +1,63 @@
 <resources>
     <string name="app_name">Memento</string>
+    
+    <!-- File Watcher Service -->
     <string name="file_watcher_notification_title">Memento is watching your notes</string>
     <string name="file_watcher_notification_text">Keeping your memory up to date</string>
+    
+    <!-- Scan/Processing -->
+    <string name="scan_notification_title">Building your memory</string>
+    <string name="scan_notification_text">Processed %1$d of %2$d notes</string>
+    <string name="scan_notification_complete">Memory ready</string>
+    <string name="processing_notes">Processing your notes…</string>
+    
+    <!-- Search Screen -->
     <string name="search_placeholder">What are you looking for?</string>
-    <string name="no_results">I couldn\'t find anything about that</string>
+    <string name="search_no_results">I couldn\'t find anything about that</string>
+    <string name="search_try_rephrasing">Try rephrasing your search</string>
+    <string name="search_memory_ready">Your memory is ready</string>
+    <string name="search_memory_setting_up">Setting up your memory…</string>
+    <string name="search_note_count">%d notes</string>
+    <string name="search_error">Something went wrong</string>
+    <string name="search_error_retry">I\'m still learning — try again in a moment</string>
+    <string name="search_match_semantic">Found by meaning</string>
+    <string name="search_match_keyword">Found by words</string>
+    <string name="search_match_hybrid">Strong match</string>
+    <string name="search_very_relevant">Very relevant</string>
+    
+    <!-- Onboarding - Privacy -->
+    <string name="onboarding_privacy_title">Your thoughts stay with you</string>
+    <string name="onboarding_privacy_subtitle">Everything happens on your device. Your notes never leave your phone — no cloud, no servers, no tracking.</string>
+    <string name="onboarding_privacy_local">100% local processing</string>
+    <string name="onboarding_privacy_no_internet">No internet required</string>
+    <string name="onboarding_privacy_no_data">Your data never leaves</string>
+    
+    <!-- Onboarding - Model Setup -->
+    <string name="onboarding_model_title">Preparing your memory</string>
+    <string name="onboarding_model_subtitle">Setting up the AI model that understands your notes…</string>
+    <string name="onboarding_model_complete">Model ready</string>
+    
+    <!-- Onboarding - Permissions -->
+    <string name="onboarding_permission_title">I need to see your notes</string>
+    <string name="onboarding_permission_subtitle">To search your notes, I need permission to read files on your device.</string>
+    <string name="onboarding_permission_grant">Grant Access</string>
+    <string name="onboarding_permission_why_title">Why is this needed?</string>
+    <string name="onboarding_permission_why_body">Memento reads your note files to create a searchable memory. All processing happens locally — your notes are never uploaded anywhere.</string>
+    <string name="onboarding_permission_denied_title">I really need this to work</string>
+    <string name="onboarding_permission_denied_body">Without file access, I can\'t read or search your notes. Your privacy is completely protected — everything stays on your device.</string>
+    <string name="onboarding_permission_settings">Open Settings</string>
+    
+    <!-- Onboarding - Folder Selection -->
+    <string name="onboarding_folder_title">Where are your notes?</string>
+    <string name="onboarding_folder_subtitle">Choose the folder where you keep your notes. I\'ll watch it for changes.</string>
+    <string name="onboarding_folder_select">Choose Folder</string>
+    <string name="onboarding_folder_selected">Selected: %s</string>
+    
+    <!-- Common -->
+    <string name="continue_button">Continue</string>
+    <string name="get_started">Get Started</string>
+    <string name="notes_indexed">%d notes in memory</string>
     <string name="permission_required">Permission needed to read your notes</string>
     <string name="grant_permission">Grant Access</string>
-    <string name="notes_indexed">%d notes in memory</string>
-    <string name="processing_notes">Processing your notes…</string>
+    <string name="no_results">I couldn\'t find anything about that</string>
 </resources>

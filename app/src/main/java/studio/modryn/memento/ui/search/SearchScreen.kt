@@ -1,12 +1,16 @@
 package studio.modryn.memento.ui.search
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,17 +41,20 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import studio.modryn.memento.domain.model.SearchResult
@@ -61,6 +69,11 @@ import studio.modryn.memento.ui.theme.MementoColors
  * - Dark: Black background, soft text
  * - Fast: Instant feedback, no loading spinners for quick searches
  * - Temporary: Designed to appear and disappear quickly
+ * 
+ * Performance optimizations:
+ * - Stable keys for LazyColumn items
+ * - Remember expensive operations
+ * - Minimal recomposition scope
  */
 @Composable
 fun SearchScreen(
@@ -70,6 +83,12 @@ fun SearchScreen(
     val searchState by viewModel.searchState.collectAsState()
     val noteCount by viewModel.noteCount.collectAsState()
     val expandedResultId by viewModel.expandedResultId.collectAsState()
+    
+    // Remember callbacks to avoid recomposition
+    val onQueryChange = remember { viewModel::onQueryChange }
+    val onClear = remember { viewModel::clearQuery }
+    val onSearch = remember { viewModel::searchNow }
+    val onToggleExpanded = remember { viewModel::toggleExpanded }
     
     Box(
         modifier = Modifier
@@ -88,9 +107,9 @@ fun SearchScreen(
             // Search bar
             SearchBar(
                 query = query,
-                onQueryChange = viewModel::onQueryChange,
-                onClear = viewModel::clearQuery,
-                onSearch = viewModel::searchNow
+                onQueryChange = onQueryChange,
+                onClear = onClear,
+                onSearch = onSearch
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -107,7 +126,7 @@ fun SearchScreen(
                     ResultsList(
                         results = state.results,
                         expandedResultId = expandedResultId,
-                        onResultClick = viewModel::toggleExpanded
+                        onResultClick = onToggleExpanded
                     )
                 }
                 is SearchState.Empty -> {
@@ -204,13 +223,22 @@ private fun IdleState(noteCount: Int) {
         ) {
             Text(
                 text = if (noteCount > 0) {
-                    "$noteCount notes in memory"
+                    "Your memory is ready"
                 } else {
-                    "No notes indexed yet"
+                    "Setting up your memory..."
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MementoColors.OnSurfaceMuted
             )
+            
+            if (noteCount > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "$noteCount notes",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MementoColors.OnSurfaceMuted.copy(alpha = 0.6f)
+                )
+            }
         }
     }
 }
@@ -258,10 +286,17 @@ private fun SearchResultCard(
     isExpanded: Boolean,
     onClick: () -> Unit
 ) {
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "chevron_rotation"
+    )
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .animateContentSize(animationSpec = tween(durationMillis = 200)),
         colors = CardDefaults.cardColors(
             containerColor = MementoColors.ResultCardBackground
         ),
@@ -270,14 +305,32 @@ private fun SearchResultCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Title
-            Text(
-                text = result.noteTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = MementoColors.OnBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Header row with title and expansion indicator
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Title
+                Text(
+                    text = result.noteTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MementoColors.OnBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                // Expansion indicator
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = MementoColors.OnSurfaceMuted,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(rotationAngle)
+                )
+            }
             
             Spacer(modifier = Modifier.height(4.dp))
             
@@ -290,7 +343,7 @@ private fun SearchResultCard(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Matched snippet
+            // Matched snippet with highlighted terms
             Text(
                 text = result.matchedText,
                 style = MaterialTheme.typography.bodyMedium,
@@ -308,25 +361,27 @@ private fun SearchResultCard(
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    // Match type indicator
+                    // Match type indicator - friendlier language
                     Row {
                         Text(
                             text = when (result.matchType) {
-                                SearchResult.MatchType.SEMANTIC -> "Semantic match"
-                                SearchResult.MatchType.KEYWORD -> "Keyword match"
-                                SearchResult.MatchType.HYBRID -> "Semantic + Keyword"
+                                SearchResult.MatchType.SEMANTIC -> "Found by meaning"
+                                SearchResult.MatchType.KEYWORD -> "Found by words"
+                                SearchResult.MatchType.HYBRID -> "Strong match"
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = MementoColors.Primary
                         )
                         
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Text(
-                            text = "Score: ${String.format("%.2f", result.score)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MementoColors.OnSurfaceMuted
-                        )
+                        // Only show score for expanded view, and make it subtle
+                        if (result.score >= 0.8f) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Very relevant",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MementoColors.OnSurfaceMuted
+                            )
+                        }
                     }
                 }
             }
@@ -342,11 +397,21 @@ private fun EmptyState(query: String) {
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "I couldn't find anything about \"$query\"",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MementoColors.OnSurfaceVariant
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "I couldn't find anything about that",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MementoColors.OnSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Try rephrasing your search",
+                style = MaterialTheme.typography.bodySmall,
+                color = MementoColors.OnSurfaceMuted
+            )
+        }
     }
 }
 
@@ -358,10 +423,20 @@ private fun ErrorState(message: String) {
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MementoColors.Error
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Something went wrong",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MementoColors.Error.copy(alpha = 0.9f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "I'm still learning — try again in a moment",
+                style = MaterialTheme.typography.bodySmall,
+                color = MementoColors.OnSurfaceMuted
+            )
+        }
     }
 }

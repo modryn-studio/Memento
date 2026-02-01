@@ -34,11 +34,41 @@ sealed class SearchState {
 
 /**
  * UI state for the overall app.
+ * 
+ * Follows onboarding flow:
+ * SettingUpModel -> PermissionRequired -> FolderSelectionRequired -> Indexing -> Ready
  */
 sealed class AppState {
+    /** Initial loading state */
     object Loading : AppState()
-    object PermissionRequired : AppState()
+    
+    /** Model files being decompressed on first run */
+    data class SettingUpModel(val progress: Int, val message: String) : AppState()
+    
+    /** Storage/notification permissions needed */
+    data class PermissionRequired(val denialCount: Int) : AppState()
+    
+    /** User needs to select notes folder */
     object FolderSelectionRequired : AppState()
-    object Indexing : AppState()
+    
+    /** Initial scan in progress */
+    data class Indexing(val progress: ScanProgress?) : AppState()
+    
+    /** App is ready for search */
     data class Ready(val noteCount: Int) : AppState()
+}
+
+/**
+ * Progress information for folder scanning.
+ */
+data class ScanProgress(
+    val processedFiles: Int,
+    val totalFiles: Int,
+    val message: String = ""
+) {
+    val progressPercent: Int
+        get() = if (totalFiles > 0) (processedFiles * 100) / totalFiles else 0
+    
+    val isComplete: Boolean
+        get() = processedFiles >= totalFiles
 }

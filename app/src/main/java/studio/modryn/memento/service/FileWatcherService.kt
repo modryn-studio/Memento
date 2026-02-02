@@ -306,7 +306,7 @@ class FileWatcherService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.file_watcher_notification_title))
             .setContentText(getString(R.string.file_watcher_notification_text))
-            .setSmallIcon(android.R.drawable.ic_menu_search) // TODO: Replace with Memento icon
+            .setSmallIcon(R.drawable.ic_memento)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setSilent(true)

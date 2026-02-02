@@ -96,6 +96,39 @@ Memento is a "Silent System" that works invisibly in the background:
 - [x] Permission handling with progressive escalation
 - [x] Initial scan workflow with progress tracking
 - [x] Performance optimizations (parallel search, loop unrolling)
+- [x] Custom brand identity with glassmorphism icon design
+
+## Project Structure
+
+```
+Memento/
+├── app/                    # Android application module
+│   ├── src/main/
+│   │   ├── assets/         # ONNX model files (compressed)
+│   │   ├── java/           # Kotlin source code
+│   │   │   └── studio/modryn/memento/
+│   │   │       ├── data/   # Database, repositories, embeddings
+│   │   │       ├── di/     # Hilt dependency injection
+│   │   │       ├── domain/ # Domain models
+│   │   │       ├── service/# Background services & workers
+│   │   │       └── ui/     # Compose UI & ViewModels
+│   │   └── res/            # Android resources
+│   │       ├── drawable/   # Vector drawables (notification icons)
+│   │       ├── mipmap-*/   # Launcher icons (5 DPI variants)
+│   │       └── values/     # Strings, colors, themes
+│   └── build.gradle.kts    # App module build config
+├── design/                 # Brand assets & design files
+│   ├── logomark.svg        # Original vector logomark (1024×1024)
+│   ├── ic_launcher_512.png # Play Store icon (512×512)
+│   └── README.md           # Brand guidelines & regeneration instructions
+├── gradle/                 # Gradle wrapper files
+├── .github/                # GitHub configuration
+│   └── copilot-instructions.md
+├── build.gradle.kts        # Project-level build config
+└── README.md              # This file
+```
+
+See [`app/README.md`](app/README.md) for module documentation and [`design/README.md`](design/README.md) for brand guidelines.
 
 ## Phase 2 Features (Weeks 3-4)
 
@@ -112,9 +145,7 @@ Memento is a "Silent System" that works invisibly in the background:
 - `RECEIVE_BOOT_COMPLETED` - Restart service on reboot
 - `WAKE_LOCK` - Keep service running
 - Storage Access Framework (SAF) - Folder selection on Android 11+
-- `FOREGROUND_SERVICE` - Background file monitoring
-- `POST_NOTIFICATIONS` - Service notification
-- `SYSTEM_ALERT_WINDOW` - Global search overlay (future)
+- `SYSTEM_ALERT_WINDOW` - Global search overlay (Phase 2)
 
 ## License
 

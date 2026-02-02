@@ -28,3 +28,13 @@ See project [README.md](../README.md) for full documentation.
 - Loop-unrolled cosine similarity and normalization
 - File event debouncing (500ms)
 - Database indexes for fast lookups
+
+## Icon Assets
+
+Custom Memento branding with glassmorphism design (purple #BB86FC + teal #03DAC6):
+
+- **Launcher Icons:** `res/mipmap-*dpi/ic_launcher.png` (48px to 192px across 5 DPI buckets)
+- **Notification Icon:** `res/drawable/ic_memento.xml` (24dp vector drawable)
+- **Play Store:** `../design/ic_launcher_512.png` (512×512 PNG, 254 KB)
+
+Original design files in [`../design/`](../design/). See design README for regeneration instructions.

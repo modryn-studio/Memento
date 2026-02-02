@@ -303,7 +303,7 @@ class NoteProcessingWorker @AssistedInject constructor(
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(context.getString(R.string.scan_notification_title))
             .setContentText(message)
-            .setSmallIcon(android.R.drawable.ic_menu_search)
+            .setSmallIcon(R.drawable.ic_memento)
             .setOngoing(true)
             .setSilent(true)
             .apply {
